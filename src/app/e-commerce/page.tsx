@@ -1,8 +1,20 @@
+"use client";
+import { useState, useRef } from 'react';
 import Link from "next/link";
 import Image from "next/image";
-import Cart from "@/components/Cart";
+import Cart, { CartRef } from "@/components/Cart";
+import AddToCartAnimation from "@/components/AddToCartAnimation";
 
-const products = [
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  description: string;
+  category: string;
+  image: string;
+}
+
+const products: Product[] = [
   {
     id: 1,
     name: "Özel Tasarım T-Shirt",
@@ -54,6 +66,42 @@ const products = [
 ];
 
 export default function ECommerce() {
+  const cartRef = useRef<CartRef>(null);
+  const [animation, setAnimation] = useState<{
+    product: { id: number; name: string; image: string };
+    startPosition: { x: number; y: number };
+  } | null>(null);
+
+  const handleAddToCart = (product: Product, event: React.MouseEvent<HTMLButtonElement>) => {
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const startPosition = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+
+    setAnimation({
+      product: {
+        id: product.id,
+        name: product.name,
+        image: product.image
+      },
+      startPosition
+    });
+
+    // Animasyon tamamlandıktan sonra sepete ekle
+    setTimeout(() => {
+      if (cartRef.current) {
+        cartRef.current.addToCart({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image
+        });
+      }
+    }, 1000); // Animasyon süresi kadar bekle
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
       <main className="container mx-auto px-4 py-16">
@@ -156,7 +204,10 @@ export default function ECommerce() {
                   <span className="text-xl font-bold text-gray-900 dark:text-white">
                     {product.price.toFixed(2)} TL
                   </span>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                  <button 
+                    onClick={(e) => handleAddToCart(product, e)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
                     Sepete Ekle
                   </button>
                 </div>
@@ -167,7 +218,16 @@ export default function ECommerce() {
       </main>
 
       {/* Cart Component */}
-      <Cart />
+      <Cart ref={cartRef} />
+
+      {/* Add to Cart Animation */}
+      {animation && (
+        <AddToCartAnimation
+          product={animation.product}
+          startPosition={animation.startPosition}
+          onComplete={() => setAnimation(null)}
+        />
+      )}
     </div>
   );
 } 
